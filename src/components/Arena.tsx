@@ -4,12 +4,19 @@ import { useGameStore } from '../store'
 export const Arena = () => {
     const endGame = useGameStore((state) => state.endGame)
     const triggerShake = useGameStore((state) => state.triggerShake)
+    const elapsed = useGameStore((state) => state.score)
 
-    const handleWallCollision = (event: any) => {
-        const impulse = event.totalForceMagnitude || 0
-        if (impulse > 50) {
-            triggerShake(Math.min(impulse / 100, 3))
+    const handleWallCollision = (event: unknown) => {
+        const data = event as { totalForceMagnitude?: number }
+        const impulse = data.totalForceMagnitude ?? 0
+        if (impulse <= 50) return
+
+        if (elapsed >= 120) {
+            triggerShake(0.3)
+            return
         }
+
+        triggerShake(Math.min(impulse / 300, 0.7))
     }
 
     return (
@@ -104,7 +111,7 @@ export const Arena = () => {
             {/* Goal Sensor */}
             <RigidBody type="fixed" sensor onIntersectionEnter={({ other }) => {
                 if (other.rigidBodyObject?.name !== 'player') {
-                    endGame()
+                    endGame('goal')
                 }
             }}>
                 <CuboidCollider args={[3, 2, 0.5]} position={[0, 2, -9]} />

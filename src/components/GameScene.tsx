@@ -14,7 +14,6 @@ import { Particles } from './Particles'
 import { MicInput } from './MicInput'
 import { Recorder } from './Recorder'
 import { CameraShake } from './CameraShake'
-import { AlertSystem } from './AlertSystem'
 import { useGameStore } from '../store'
 
 const PhysicsWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -173,7 +172,6 @@ export const GameScene = () => {
     return (
         <>
             <UI />
-            <AlertSystem />
             <AudioSystem />
             <MicInput />
             <KeyboardControls

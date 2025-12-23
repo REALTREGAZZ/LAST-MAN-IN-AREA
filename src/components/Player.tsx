@@ -12,7 +12,7 @@ export const Player = () => {
     const rightLegRef = useRef<RapierRigidBody>(null!)
 
     useFrame(() => {
-        if (torsoRef.current) (window as any).playerRB = torsoRef.current
+        if (torsoRef.current) window.playerRB = torsoRef.current
     })
 
     // Joints
@@ -41,16 +41,24 @@ export const Player = () => {
 
     const micVolume = useGameStore(state => state.micVolume)
     const isPlaying = useGameStore(state => state.isPlaying)
+    const elapsed = useGameStore(state => state.score)
     const triggerShake = useGameStore(state => state.triggerShake)
 
     // Handle collisions for camera shake
-    const handleCollision = (event: any) => {
-        const impulse = event.totalForceMagnitude || 0
-        const mass = torsoRef.current?.mass() || 1
+    const handleCollision = (event: unknown) => {
+        const data = event as { totalForceMagnitude?: number }
+        const impulse = data.totalForceMagnitude ?? 0
+        const mass = torsoRef.current?.mass() ?? 1
         const intensity = impulse / mass
-        if (intensity > 5) {
-            triggerShake(Math.min(intensity / 10, 5))
+
+        if (intensity <= 5) return
+
+        if (elapsed >= 120) {
+            triggerShake(0.3)
+            return
         }
+
+        triggerShake(Math.min(intensity / 60, 0.8))
     }
 
     // Recovery force & Mic Jump
@@ -166,7 +174,7 @@ export const Player = () => {
             {/* Head - BOBBLEHEAD (1.5x Mass multiplier handled by making it a separate RigidBody or increasing torso mass) */}
             {/* For simplicity, we'll increase torso mass and make head visual, but user asked for Head mass multiplier */}
             {/* Let's make Head a separate RigidBody with a joint for the 'Flan' effect */}
-            <RigidBody ref={headRef} position={[0, 1.2, 0]} mass={12} colliders="ball"> {/* 1.5x of Torso mass roughly */}
+            <RigidBody ref={headRef} position={[0, 1.2, 0]} mass={12} colliders="ball" name="player-head-rb"> {/* 1.5x of Torso mass roughly */}
                 <mesh castShadow name="player-head" scale={1 + micVolume * 0.5}>
                     <sphereGeometry args={[0.6, 32, 32]} /> {/* Big Head */}
                     <meshStandardMaterial color={skinColor} />
@@ -205,7 +213,7 @@ export const Player = () => {
             </RigidBody>
 
             {/* Left Leg */}
-            <RigidBody ref={leftLegRef} position={[-0.3, -1, 0]} colliders="cuboid" mass={2}>
+            <RigidBody ref={leftLegRef} position={[-0.3, -1, 0]} colliders="cuboid" mass={2} name="player-left-leg-rb">
                 {/* Shorts */}
                 <mesh position={[0, 0.3, 0]}>
                     <boxGeometry args={[0.5, 0.6, 0.5]} />
@@ -224,7 +232,7 @@ export const Player = () => {
             </RigidBody>
 
             {/* Right Leg */}
-            <RigidBody ref={rightLegRef} position={[0.3, -1, 0]} colliders="cuboid" mass={2}>
+            <RigidBody ref={rightLegRef} position={[0.3, -1, 0]} colliders="cuboid" mass={2} name="player-right-leg-rb">
                 {/* Shorts */}
                 <mesh position={[0, 0.3, 0]}>
                     <boxGeometry args={[0.5, 0.6, 0.5]} />

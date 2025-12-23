@@ -5,34 +5,74 @@ import { useRef } from 'react'
 
 export const CameraShake = () => {
     const { camera } = useThree()
-    const shakeIntensity = useGameStore(state => state.shakeIntensity)
-    const triggerShake = useGameStore(state => state.triggerShake)
 
-    // Store original position and rotation to return to
+    const isPlaying = useGameStore(state => state.isPlaying)
+    const isGameOver = useGameStore(state => state.isGameOver)
+    const elapsed = useGameStore(state => state.score)
+
+    const additionalIntensity = useGameStore(state => state.shakeIntensity)
+    const setShakeIntensity = useGameStore(state => state.setShakeIntensity)
+
     const originalPos = useRef(new THREE.Vector3(0, 8, 16))
     const originalRotation = useRef(new THREE.Euler())
 
+    const sampleAccumulator = useRef(0)
+    const currentOffset = useRef(new THREE.Vector3())
+    const currentRotOffset = useRef(new THREE.Euler())
+
     useFrame((_state, delta) => {
-        if (shakeIntensity > 0) {
-            // Dynamic shake based on intensity - MORE DRAMATIC!
-            const shake = shakeIntensity * 0.5 // Increased from 0.2 to 0.5
-            camera.position.x = originalPos.current.x + (Math.random() - 0.5) * shake
-            camera.position.y = originalPos.current.y + (Math.random() - 0.5) * shake
-            camera.position.z = originalPos.current.z + (Math.random() - 0.5) * shake
+        if (isGameOver) {
+            if (additionalIntensity > 0) setShakeIntensity(0)
+            return
+        }
 
-            // Add rotation shake for more impact
-            const rotationShake = shakeIntensity * 0.02
-            camera.rotation.z = (Math.random() - 0.5) * rotationShake
-            camera.rotation.x = originalRotation.current.x + (Math.random() - 0.5) * rotationShake * 0.5
-            camera.rotation.y = originalRotation.current.y + (Math.random() - 0.5) * rotationShake * 0.5
-
-            // Dynamic decay: stronger shakes last longer
-            const decaySpeed = shakeIntensity > 5 ? 5 : 10
-            triggerShake(Math.max(0, shakeIntensity - delta * decaySpeed))
-        } else {
-            // Return to original smoothly
+        if (!isPlaying) {
             camera.position.lerp(originalPos.current, delta * 5)
-            camera.rotation.z *= 0.9 // Smooth rotation return
+            camera.rotation.set(camera.rotation.x, camera.rotation.y, camera.rotation.z * 0.9)
+            if (additionalIntensity > 0) setShakeIntensity(0)
+            return
+        }
+
+        const isMaximumChaos = elapsed >= 120
+        const baseIntensity = isMaximumChaos ? 0.5 : 0
+
+        const intensity = baseIntensity + additionalIntensity
+
+        sampleAccumulator.current += delta
+        const sampleInterval = 1 / 30
+        if (sampleAccumulator.current >= sampleInterval) {
+            sampleAccumulator.current = 0
+
+            currentOffset.current.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
+            currentRotOffset.current.set(
+                (Math.random() - 0.5) * 0.5,
+                (Math.random() - 0.5) * 0.5,
+                (Math.random() - 0.5) * 1,
+            )
+        }
+
+        if (intensity > 0) {
+            camera.position.set(
+                originalPos.current.x + currentOffset.current.x * intensity,
+                originalPos.current.y + currentOffset.current.y * intensity,
+                originalPos.current.z + currentOffset.current.z * intensity,
+            )
+
+            const rotationShake = intensity * 0.02
+            camera.rotation.set(
+                originalRotation.current.x + currentRotOffset.current.x * rotationShake,
+                originalRotation.current.y + currentRotOffset.current.y * rotationShake,
+                originalRotation.current.z + currentRotOffset.current.z * rotationShake,
+            )
+        } else {
+            camera.position.lerp(originalPos.current, delta * 5)
+            camera.rotation.set(camera.rotation.x, camera.rotation.y, camera.rotation.z * 0.9)
+        }
+
+        if (additionalIntensity > 0) {
+            const decayPerSecond = isMaximumChaos ? 0.92 : 0.6
+            const next = additionalIntensity * Math.pow(decayPerSecond, delta)
+            setShakeIntensity(next < 0.001 ? 0 : next)
         }
     })
 

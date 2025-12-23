@@ -304,9 +304,9 @@ export const BallSpawner = () => {
 
         spawnAccumulator.current += delta
 
-        const multiplier = exponentialMultiplier(elapsed)
+        const exponentialMultiplier = Math.max(1, 2 * Math.exp(0.05 * elapsed))
         const baseIntervalMs = Math.max(100, 2000 - elapsed * 10)
-        const intervalMs = baseIntervalMs / multiplier
+        const intervalMs = baseIntervalMs / exponentialMultiplier
         const intervalSec = intervalMs / 1000
 
         const baseSpawns = Math.floor(spawnAccumulator.current / intervalSec)
